@@ -28,13 +28,18 @@ const registerLimiter = rateLimit({
   }
 });
 
-// Helper function to generate Subsonic API authentication
-function generateSubsonicAuth(password) {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const token = crypto.createHash('md5')
-    .update(password + salt)
-    .digest('hex');
-  return { salt, token };
+// Helper function to get Navidrome auth token
+async function getNavidromeToken() {
+  try {
+    const response = await axios.post(`${NAVIDROME_URL}/auth/login`, {
+      username: ADMIN_USER,
+      password: ADMIN_PASSWORD
+    });
+    return response.data.token;
+  } catch (error) {
+    console.error('Failed to get Navidrome token:', error.message);
+    throw new Error('Failed to authenticate with Navidrome');
+  }
 }
 
 // Registration endpoint
@@ -75,49 +80,40 @@ app.post('/api/register', registerLimiter, async (req, res) => {
       });
     }
 
-    // Generate authentication for admin
-    const { salt, token } = generateSubsonicAuth(ADMIN_PASSWORD);
+    // Get admin auth token
+    const token = await getNavidromeToken();
 
-    // Create user via Subsonic API
-    const createUserUrl = `${NAVIDROME_URL}/rest/createUser`;
-    
-    const params = {
-      u: ADMIN_USER,
-      t: token,
-      s: salt,
-      v: '1.16.1',
-      c: 'NavidromeRegistration',
-      f: 'json',
-      username: username,
-      password: password,
+    // Create user via Navidrome internal API
+    const userData = {
+      userName: username,
+      name: username,
       email: email,
-      adminRole: false,
-      downloadRole: true,
-      uploadRole: true,
-      playlistRole: true,
-      shareRole: true,
-      commentRole: true,
-      podcastRole: true,
-      streamRole: true,
-      jukeboxRole: false,
-      settingsRole: false,
-      coverArtRole: true
+      password: password,
+      isAdmin: false
     };
 
-    const response = await axios.get(createUserUrl, { params });
+    const response = await axios.post(
+      `${NAVIDROME_URL}/api/user`,
+      userData,
+      {
+        headers: {
+          'X-ND-Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
 
-    // Check Subsonic API response
-    if (response.data['subsonic-response'].status === 'ok') {
+    // Check response
+    if (response.status === 200 || response.status === 201) {
       return res.json({
         success: true,
         message: 'Account created successfully',
         username: username
       });
     } else {
-      const error = response.data['subsonic-response'].error;
       return res.status(400).json({
         success: false,
-        error: error.message || 'Failed to create user'
+        error: 'Failed to create user'
       });
     }
 
@@ -125,11 +121,24 @@ app.post('/api/register', registerLimiter, async (req, res) => {
     console.error('Registration error:', error.response?.data || error.message);
     
     // Handle specific errors
-    if (error.response?.data?.['subsonic-response']?.error) {
-      const subsonicError = error.response.data['subsonic-response'].error;
+    if (error.response?.status === 409) {
       return res.status(400).json({
         success: false,
-        error: subsonicError.message || 'User creation failed'
+        error: 'Username already exists'
+      });
+    }
+
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      return res.status(500).json({
+        success: false,
+        error: 'Authentication failed with Navidrome. Check admin credentials.'
+      });
+    }
+
+    if (error.message === 'Failed to authenticate with Navidrome') {
+      return res.status(500).json({
+        success: false,
+        error: 'Cannot connect to Navidrome. Check admin credentials.'
       });
     }
 
