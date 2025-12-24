@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  navidrome-registration:
+    build: .
+    container_name: navidrome-registration
+    ports:
+      - "3001:3001"
+    environment:
+      - NAVIDROME_URL=${NAVIDROME_URL:-http://navidrome:4533}
+      - NAVIDROME_ADMIN_USER=${NAVIDROME_ADMIN_USER:-admin}
+      - NAVIDROME_ADMIN_PASSWORD=${NAVIDROME_ADMIN_PASSWORD}
+      - PORT=3001
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+    restart: unless-stopped
+    networks:
+      - navidrome-network
+
+  # Example: Include Navidrome service (optional)
+  # Uncomment if you want to run both services together
+  # navidrome:
+  #   image: deluan/navidrome:latest
+  #   container_name: navidrome
+  #   ports:
+  #     - "4533:4533"
+  #   environment:
+  #     ND_SCANSCHEDULE: 1h
+  #     ND_LOGLEVEL: info
+  #     ND_BASEURL: ""
+  #   volumes:
+  #     - ./data:/data
+  #     - ./music:/music:ro
+  #   restart: unless-stopped
+  #   networks:
+  #     - navidrome-network
+
+networks:
+  navidrome-network:
+    driver: bridge
