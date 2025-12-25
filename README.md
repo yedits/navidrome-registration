@@ -1,14 +1,7 @@
-# Navidrome Registration Service
+# Navidrome User Login
 
 A self-service user registration middleware for [Navidrome](https://github.com/navidrome/navidrome) music server. Enables public user registration while maintaining admin control.
 
-## 🎯 Features
-- Self-service user registration via REST API
-- Automatic user creation in Navidrome via Subsonic API
-- Rate limiting to prevent spam registrations
-- Input validation (username, email, password strength)
-- CORS support for frontend integration
-- Token-based authentication with Navidrome
 - 
 ## Prerequisites
 - Node.js 14.x or higher
