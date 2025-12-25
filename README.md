@@ -2,7 +2,6 @@
 
 A self-service user registration middleware for [Navidrome](https://github.com/navidrome/navidrome) music server. Enables public user registration while maintaining admin control.
 
-- 
 ## Prerequisites
 - Node.js 14.x or higher
 - Running Navidrome instance
